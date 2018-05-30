@@ -12,6 +12,8 @@ let properties = {
     'P106': 'occupation'
 }
 
+let percentage;
+
 var myTable = d3.select('#table-container').append('table')
     .classed('table', true)
     .classed('table-condensed', true)
@@ -36,8 +38,8 @@ let rows = myTable.append('tbody').selectAll('tr').data(output, function(d) { re
 function updateTable() {
 
     output = output.sort(function(a, b) {
-        var textA = a.original_name.toUpperCase();
-        var textB = b.original_name.toUpperCase();
+        var textA = a.original_name //.toUpperCase();
+        var textB = b.original_name //.toUpperCase();
         return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
     });
 
@@ -176,19 +178,7 @@ function replaceNameData(old_id, new_id) {
             });
 
         })
-
-
-
     })
-
-
-
-
-
-
-
-
-
 }
 
 function finish() {
@@ -206,7 +196,10 @@ function getIssues() {
     searchPerson(itemsList[counter]);
 
     function searchPerson(name) {
-        console.log(counter, name)
+
+
+
+        console.log(percentage, name)
         // Search for person
         let urlSearchPerson = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${name}&language=${language}&format=json&origin=*`;
         let person = {}
@@ -246,7 +239,7 @@ function getIssues() {
 
                                         let obj = {
                                             'prop id': d.mainsnak.property,
-                                            'prop name': properties[d.mainsnak.property],
+                                            'prop value': properties[d.mainsnak.property],
                                             'value id': d.mainsnak.datavalue.value.time,
                                             'value name': d.mainsnak.datavalue.value.time
                                         }
@@ -267,7 +260,7 @@ function getIssues() {
                                         // console.log(d.mainsnak.property, properties[d.mainsnak.property], d.mainsnak.datavalue.value.id, data.claims[key])
                                         propertiesAvailable.push({
                                             'prop id': d.mainsnak.property,
-                                            'prop name': properties[d.mainsnak.property],
+                                            'prop value': properties[d.mainsnak.property],
                                             'value id': d.mainsnak.datavalue.value.id,
                                             'value name': undefined
                                         })
@@ -309,7 +302,9 @@ function getIssues() {
                         })
 
                         updateTable();
-
+                        percentage = (counter + 1) / itemsList.length * 100;
+                        d3.select('.percentage .bar').style('width', percentage + '%')
+                        if (percentage == 100) d3.select('.percentage .bar').style('background-color', '#48C9B0');
                         // recursively recall this function itself as the scraping for this persone ended
                         counter++;
                         if (counter < itemsList.length) {
@@ -330,7 +325,9 @@ function getIssues() {
                     'idWikidata': S(name).slugify().s
                 })
                 updateTable();
-
+                percentage = (counter + 1) / itemsList.length * 100;
+                d3.select('.percentage .bar').style('width', percentage + '%')
+                if (percentage == 100) d3.select('.percentage .bar').style('background-color', '#48C9B0');
                 // recursively recall this function itself as the scraping for this persone failed
                 counter++;
                 if (counter < itemsList.length) {
@@ -353,18 +350,19 @@ function downloadData() {
 
     let headers = []
 
-    d3.selectAll('table thead tr th').each(function(d,i){
+    d3.selectAll('table thead tr th').each(function(d, i) {
         headers.push(d3.select(this).html());
     })
 
     // // repository id  number  state created_at  updated_at  closed_at labels
     let tsvtxt = headers.join('\t') + '\n';
-    tsvtxt = '';
+
     output.forEach(function(o, i) {
-        headers.forEach(function(ee,ii){
-            console.log(i,headers.length)
+        headers.forEach(function(ee, ii) {
+            console.log(headers)
+            console.log(o)
             tsvtxt += o[ee];
-            if (ii < headers.length-1) {
+            if (ii < headers.length - 1) {
                 tsvtxt += '\t'
             } else {
                 tsvtxt += '\n'
@@ -372,7 +370,7 @@ function downloadData() {
         })
     });
 
-    console.log(tsvtxt);
+    // console.log(tsvtxt);
 
     var blob = new Blob([tsvtxt], {
         type: "data:text/tsv;charset=utf-8"
@@ -382,6 +380,6 @@ function downloadData() {
 
 function loadSample() {
     document.getElementById('items-list').value = `Italo Calvino\nAbba Giulio Cesare\nAbbagnano Nicola\nAbbas il Grande, scià di Persia\nAbbé Grégoire (Henry Baptiste Grégoire)\nAbbott Edwin Abbott\nAbelardo\nAbernathy Ralph\nAbraham Cresques\nAccrocca Elio Filippo\nAddison Joseph\nAdorno Theodor Wiesengrund\nAfanasjev Aleksandr Nikolaevič\nAgamben Giorgio\nAgostino, santo\nAiolfi Luciano\nAizenberg Roberto\nAlain (Émile Auguste Chartier)\nAlberoni Francesco\nAlberti Leon Battista\nAlbertoni Ettore A.\nAlcmane\nAleramo Sibilla\nAlessandro I, zar\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody\nAlmansi Guido\nAltdorfer Albrecht`;
-    document.getElementById('items-list').value = `Italo Calvino\nAlberoni Francesco\nAlberti Leon Battista\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody`;
+    // document.getElementById('items-list').value = `Italo Calvino\nAlberoni Francesco\nAlberti Leon Battista\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody`;
     //
 }

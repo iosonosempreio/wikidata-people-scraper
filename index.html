@@ -25,10 +25,26 @@
             background-color: #FEF9E7;
             color: #B7950B;
         }
+        .percentage {
+            width: 100%;
+            height: 3px;
+            background-color: #F4F6F7;
+            position: sticky;
+            top:0;
+            z-index: 1000;
+        }
+        .percentage .bar {
+            width: 0%;
+            height: 100%;
+            background-color: #3498DB;
+        }
     </style>
 </head>
 
 <body>
+    <div class="percentage">
+        <div class="bar"></div>
+    </div>
     <div class="container">
         <div class="row">
             <div class="col-md-12">
