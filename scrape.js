@@ -348,18 +348,36 @@ function getIssues() {
 
 function downloadData() {
     console.log('download everything :)')
-    let outputName = 'wikidata-people.tsv'
+
+    let outputName = 'wikidata-people.tsv';
+
+    let headers = []
+
+    d3.selectAll('table thead tr th').each(function(d,i){
+        headers.push(d3.select(this).html());
+    })
 
     // // repository id  number  state created_at  updated_at  closed_at labels
-    let tsvtxt = 'repository\tid\tnumber\tstate\tcreated_at\tupdated_at\tclosed_at\tlabels\tcomments\ttitle\tuser_id\tuser_login\tissue_url\tbody\n';
-    // output.forEach(function(o, i) {
-    //     // console.log(o);
-    //     tsvtxt += o.repository + '\t' + o.id + '\t' + o.number + '\t' + o.state + '\t' + o.created_at + '\t' + o.updated_at + '\t' + o.closed_at + '\t' + o.labels + '\t' + o.comments + '\t' + o.title + '\t' + o.user_id + '\t' + o.user_login + '\t' + o.issue_url + '\t' + o.body + '\n';
-    // });
-    // var blob = new Blob([tsvtxt], {
-    //     type: "data:text/tsv;charset=utf-8"
-    // });
-    // saveAs(blob, outputName);
+    let tsvtxt = headers.join('\t') + '\n';
+    tsvtxt = '';
+    output.forEach(function(o, i) {
+        headers.forEach(function(ee,ii){
+            console.log(i,headers.length)
+            tsvtxt += o[ee];
+            if (ii < headers.length-1) {
+                tsvtxt += '\t'
+            } else {
+                tsvtxt += '\n'
+            }
+        })
+    });
+
+    console.log(tsvtxt);
+
+    var blob = new Blob([tsvtxt], {
+        type: "data:text/tsv;charset=utf-8"
+    });
+    saveAs(blob, outputName);
 }
 
 function loadSample() {
