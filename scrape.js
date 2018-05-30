@@ -25,51 +25,184 @@ tableHead.append('th').html('description');
 tableHead.append('th').html('uri');
 tableHead.append('th').html('prop id');
 tableHead.append('th').html('prop value');
-// tableHead.append('th').html('comments');
-// tableHead.append('th').html('id');
 tableHead.append('th').html('value id');
 tableHead.append('th').html('value name');
 tableHead.append('th').html('found');
 
 let output = [];
 
-let rows = myTable.append('tbody').selectAll('tr').data(output)
+let rows = myTable.append('tbody').selectAll('tr').data(output, function(d) { return d.idWikidata })
 
 function updateTable() {
-    rows = rows.data(output);
+
+    output = output.sort(function(a, b) {
+        var textA = a.original_name.toUpperCase();
+        var textB = b.original_name.toUpperCase();
+        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+    });
+
+    rows = rows.data(output, function(d) { return d.idWikidata });
 
     rows.exit().remove();
 
     rows = rows.enter()
         .append('tr')
-        .attr('id', function(d) { console.log(d); return d.idWikidata })
-        .html( function(d) {
+        .attr('class', function(d) { return d.idWikidata })
+        .classed('warn', function(d) {
+            return d['prop id'] == 'P31' && d['value id'] != 'Q5' ? true : false;
+        })
+        .classed('not-found', function(d) {
+            return !d.found;
+        })
+        .html(function(d) {
             let rowHTML = `
-                <th class="classname">${d.idWikidata}</th>
-                <th class="classname">${d.original_name}</th>
-                <th class="classname">${d.nameWikidata}</th>
-                <th class="classname">${d.description}</th>
-                <th class="classname">${d.uri}</th>
-                <th class="classname">${d['prop id']}</th>
-                <th class="classname">${d['prop name']}</th>
-                <th class="classname">${d['value id']}</th>
-                <th class="classname">${d['value name']}</th>
-                <th class="classname">${d['found']}</th>
+                <td class="">
+                    <input type="text" name="wiki-id" value="${d.idWikidata} ">
+                    <input class="refresh-data hidden" type="button" onclick="replaceNameData('${d.idWikidata}', d3.select( 'tr.${d.idWikidata} input' ).property('value') )" value="refresh">
+                </td>
+                <td class="original-name">${d.original_name}</td>
+                <td class="">${d.nameWikidata}</td>
+                <td class="">${d.description}</td>
+                <td class="">${d.uri}</td>
+                <td class="">${d['prop id']}</td>
+                <td class="">${d['prop name']}</td>
+                <td class="">${d['value id']}</td>
+                <td class="">${d['value name']}</td>
+                <td class="">${d['found']}</td>
             `;
             return rowHTML;
-        } )
-        .merge(rows)
+        })
+
+        .merge(rows);
+
 }
 
+function replaceNameData(old_id, new_id) {
+    console.log(`replace ${old_id} with ${new_id}`);
+    d3.selectAll('input.refresh-data').classed('hidden', true);
+
+    output = _.remove(output, function(n) {
+        return n.idWikidata != old_id;
+    });
+
+    d3.json(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${new_id}&languages=it&origin=*`).then(function(data) {
+
+        let person = {}
+        person.found = true;
+        person.idWikidata = new_id;
+        person.uri = `http://www.wikidata.org/entity/${new_id}`;
+        person.description = data.entities[new_id].descriptions[language].value;
+        person.label = data.entities[new_id].labels[language].value;
+        person.originalName = d3.select(`tr.${old_id} td.original-name`).html();
+
+        console.log(person)
+
+        // get all properties id
+        let urlAllProperties = `https://www.wikidata.org/w/api.php?action=wbgetclaims&format=json&entity=${new_id}&origin=*`;
+        d3.json(urlAllProperties).then(function(data) {
+
+            let propertiesAvailable = [];
+
+            // loop in properties dictionary defined at beginning
+            for (const [key, value] of Object.entries(properties)) {
+                if (data.claims[key]) {
+
+                    data.claims[key].forEach(function(d) {
+
+                        try {
+                            if (d.mainsnak.datavalue.type == 'time') {
+
+                                let obj = {
+                                    'prop id': d.mainsnak.property,
+                                    'prop name': properties[d.mainsnak.property],
+                                    'value id': d.mainsnak.datavalue.value.time,
+                                    'value name': d.mainsnak.datavalue.value.time
+                                }
+
+                                obj['original_name'] = person.originalName
+                                obj['found'] = person.found
+                                obj['idWikidata'] = person.idWikidata
+                                obj['uri'] = person.uri
+                                obj['description'] = person.description
+                                obj['nameWikidata'] = person.label
+
+
+                                output.push(obj);
+
+
+                            } else {
+
+                                propertiesAvailable.push({
+                                    'prop id': d.mainsnak.property,
+                                    'prop name': properties[d.mainsnak.property],
+                                    'value id': d.mainsnak.datavalue.value.id,
+                                    'value name': undefined
+                                })
+
+                            }
+                        } catch (err) {
+                            console.warn(err);
+                        }
+
+
+                    })
+                }
+            }
+
+            // get properties values
+            let urlPropertiesValues = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${propertiesAvailable.map(function(d){return d['value id']}).join('|')}&languages=it&props=labels&origin=*`;
+            d3.json(urlPropertiesValues).then(function(data) {
+
+                propertiesAvailable.forEach(function(d) {
+
+                    try {
+                        d['value name'] = data.entities[d['value id']].labels[language].value;
+                    } catch (err) {
+                        console.warn(d['value id'], data.entities[d['value id']].labels);
+                    }
+
+                    d['original_name'] = person.originalName
+                    d['found'] = person.found
+                    d['idWikidata'] = person.idWikidata
+                    d['uri'] = person.uri
+                    d['description'] = person.description
+                    d['nameWikidata'] = person.label
+
+                    output.push(d);
+
+                })
+                updateTable();
+                finish();
+            });
+
+        })
+
+
+
+    })
+
+
+
+
+
+
+
+
+
+}
+
+function finish() {
+    d3.select('#download-button').classed('hidden', false);
+    d3.selectAll('input.refresh-data').classed('hidden', false);
+
+}
 
 function getIssues() {
-
-
-
-    var itemsList = document.getElementById('items-list').value.split("\n");
-    console.log(itemsList)
-
+    var itemsList;
     let counter = 0;
+
+    itemsList = document.getElementById('items-list').value.split("\n");
+    // console.log(itemsList)
     searchPerson(itemsList[counter]);
 
     function searchPerson(name) {
@@ -106,11 +239,29 @@ function getIssues() {
 
                             data.claims[key].forEach(function(d) {
 
-                                // console.log(d.mainsnak.property, properties[d.mainsnak.property])
-
                                 try {
                                     if (d.mainsnak.datavalue.type == 'time') {
+
                                         // console.log(d.mainsnak.property, properties[d.mainsnak.property], d.mainsnak.datavalue.value.time, data.claims[key])
+
+                                        let obj = {
+                                            'prop id': d.mainsnak.property,
+                                            'prop name': properties[d.mainsnak.property],
+                                            'value id': d.mainsnak.datavalue.value.time,
+                                            'value name': d.mainsnak.datavalue.value.time
+                                        }
+
+                                        obj['original_name'] = name
+                                        obj['found'] = person.found
+                                        obj['idWikidata'] = person.idWikidata
+                                        obj['uri'] = person.uri
+                                        obj['description'] = person.description
+                                        obj['nameWikidata'] = person.label
+
+
+                                        output.push(obj);
+
+
                                     } else {
 
                                         // console.log(d.mainsnak.property, properties[d.mainsnak.property], d.mainsnak.datavalue.value.id, data.claims[key])
@@ -118,7 +269,7 @@ function getIssues() {
                                             'prop id': d.mainsnak.property,
                                             'prop name': properties[d.mainsnak.property],
                                             'value id': d.mainsnak.datavalue.value.id,
-                                            // 'value name': properties[d.mainsnak.property]
+                                            'value name': undefined
                                         })
 
                                     }
@@ -131,13 +282,15 @@ function getIssues() {
                         }
                     }
 
+                    // console.table(propertiesAvailable);
+
 
                     // get properties values
                     let urlPropertiesValues = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${propertiesAvailable.map(function(d){return d['value id']}).join('|')}&languages=it&props=labels&origin=*`;
                     d3.json(urlPropertiesValues).then(function(data) {
-                        // console.log('props', data.entities);
 
                         propertiesAvailable.forEach(function(d) {
+
                             try {
                                 d['value name'] = data.entities[d['value id']].labels[language].value;
                             } catch (err) {
@@ -154,15 +307,15 @@ function getIssues() {
                             output.push(d);
 
                         })
-                        
+
                         updateTable();
 
+                        // recursively recall this function itself as the scraping for this persone ended
                         counter++;
                         if (counter < itemsList.length) {
                             searchPerson(itemsList[counter]);
                         } else {
-                            console.log('output:', output);
-                            d3.select('#download-button').classed('hidden', false);
+                            finish();
                         }
 
 
@@ -173,15 +326,17 @@ function getIssues() {
             } else {
                 output.push({
                     'original_name': name,
-                    found: person.found
+                    'found': person.found,
+                    'idWikidata': S(name).slugify().s
                 })
                 updateTable();
+
+                // recursively recall this function itself as the scraping for this persone failed
                 counter++;
                 if (counter < itemsList.length) {
                     searchPerson(itemsList[counter]);
                 } else {
-                    console.log('output:', output);
-                    d3.select('#download-button').classed('hidden', false);
+                    finish();
                 }
             }
 
@@ -189,150 +344,6 @@ function getIssues() {
         });
     }
 
-
-
-    // var cid = '1a87f8ff8608809c0c7e';
-    // var cs = 'cb4dd9c973bf7e377fc9f51330f223c746231550';
-    // var baseUrl = 'https://api.github.com/repos/{{userName}}/{{repositoryName}}/issues?client_id={{cid}}&client_secret={{cs}}&state=all&per_page=100&page={{pageIndex}}';
-    // baseUrl = baseUrl.replace('{{cid}}', cid);
-    // baseUrl = baseUrl.replace('{{cs}}', cs);
-
-    // console.log('Repos to get:', itemsList.length)
-    // // console.log(itemsList);
-
-    // var myTable = d3.select('#table-container').append('table')
-    //     .classed('table', true)
-    //     .classed('table-condensed', true)
-    // // .classed('table-hover',true)
-    // // .classed('table-striped',true);
-    // var firstRow = myTable.append('thead').append('tr').attr('id', 'header');
-
-    // firstRow.append('th').html('repository');
-    // firstRow.append('th').html('number');
-    // firstRow.append('th').html('title');
-    // firstRow.append('th').html('state');
-    // firstRow.append('th').html('labels');
-    // firstRow.append('th').html('created_at');
-    // firstRow.append('th').html('updated_at');
-    // firstRow.append('th').html('closed_at');
-    // firstRow.append('th').html('comments');
-    // firstRow.append('th').html('id');
-    // firstRow.append('th').html('issue_url');
-    // firstRow.append('th').html('user_id');
-    // firstRow.append('th').html('user_login');
-    // firstRow.append('th').html('body');
-
-    // myTable = myTable.append('tbody')
-
-    // var count = 0;
-    // var page = 1;
-    // getInfo(count, page);
-
-    // function getInfo(index, pageIndex) {
-    //     if (itemsList[index]) {
-
-    //         console.log(itemsList[index]);
-    //         // var itemsList[index] = itemsList[index];
-    //         itemsList[index] = itemsList[index].replace('https://github.com/', '');
-    //         // console.log(itemsList[index]);
-    //         var identifiers = itemsList[index].split('/');
-    //         // console.log(identifiers);
-    //         var userName = identifiers[0];
-    //         var repositoryName = identifiers[1];
-    //         var url = baseUrl.replace('{{userName}}', userName).replace('{{repositoryName}}', repositoryName).replace('{{pageIndex}}', pageIndex);
-    //         // console.log(url);
-    //         d3.json(url, function(err, res) {
-    //             if (err) {
-    //                 console.error(err);
-    //                 return;
-    //             }
-    //             // console.log(res);
-    //             d3.select('#get-button').classed('hidden', true);
-    //             if (res.length > 0) {
-    //                 // console.log(res.length);
-    //                 res.forEach(function(issue, i) {
-
-    //                     if (issue.body) {
-    //                         console.log(issue.body)
-    //                         // issue.body = issue.body.replace(/<(?:.|\n)*?>/gm, '');
-    //                         issue.body = S(issue.body).stripTags().collapseWhitespace().s
-    //                     }
-
-    //                     var labelsList = [];
-    //                     issue.labels.forEach(function(d) {
-    //                         labelsList.push(d.name);
-    //                     })
-
-    //                     var thisRow = myTable.append('tr');
-
-    //                     thisRow.append('td').append('a').attr('href', 'https://github.com/' + itemsList[index]).attr('target', '_blank').html(itemsList[index]);
-
-    //                     thisRow.append('td').html(issue.number);
-    //                     thisRow.append('td').html(issue.title);
-    //                     thisRow.append('td').html(issue.state);
-    //                     thisRow.append('td').html(labelsList.toString());
-    //                     thisRow.append('td').html(issue.created_at);
-    //                     thisRow.append('td').html(issue.updated_at);
-    //                     thisRow.append('td').html(issue.closed_at);
-    //                     thisRow.append('td').html(issue.comments);
-    //                     thisRow.append('td').html(issue.id);
-    //                     thisRow.append('td').html(issue.html_url);
-    //                     thisRow.append('td').html(issue.user.id);
-    //                     thisRow.append('td').html(issue.user.login);
-    //                     thisRow.append('td').html(issue.body);
-
-    //                     var obj = {
-    //                         'repository': 'https://github.com/' + itemsList[index],
-    //                         'id': issue.id,
-    //                         'number': issue.number,
-    //                         'state': issue.state,
-    //                         'created_at': issue.created_at,
-    //                         'updated_at': issue.updated_at,
-    //                         'closed_at': issue.closed_at,
-    //                         'labels': labelsList.toString(),
-    //                         'comments': issue.comments,
-    //                         'title': issue.title,
-    //                         'user_id': issue.user.id,
-    //                         'user_login': issue.user.login,
-    //                         'issue_url': issue.html_url,
-    //                         'body': issue.body
-    //                     }
-
-    //                     output.push(obj);
-
-    //                     if (issue.number > 1 && i == (res.length - 1)) {
-    //                         // console.log('next page');
-    //                         page++;
-    //                         // console.log(page);
-    //                         window.setTimeout(getInfo(count, page), 1000);
-
-    //                     } else if (issue.number == 1) {
-    //                         page = 1;
-    //                         count++;
-    //                         // console.log(count, page)
-    //                         window.setTimeout(getInfo(count, page), 1000);
-    //                     }
-    //                 })
-    //             } else {
-    //                 page = 1;
-    //                 count++;
-    //                 // console.log(count, page)
-    //                 window.setTimeout(getInfo(count, page), 1000);
-    //                 d3.select('#download-button').classed('hidden', false);
-    //             }
-
-    //         })
-    //     } else {
-    //         if (index < itemsList.length) {
-    //             count++;
-    //             // console.log('count', count);
-    //             window.setTimeout(getInfo(count, page), 1000);
-    //         } else {
-    //             console.log('output:', output);
-    //             d3.select('#download-button').classed('hidden', false);
-    //         }
-    //     }
-    // }
 }
 
 function downloadData() {
@@ -353,6 +364,6 @@ function downloadData() {
 
 function loadSample() {
     document.getElementById('items-list').value = `Italo Calvino\nAbba Giulio Cesare\nAbbagnano Nicola\nAbbas il Grande, scià di Persia\nAbbé Grégoire (Henry Baptiste Grégoire)\nAbbott Edwin Abbott\nAbelardo\nAbernathy Ralph\nAbraham Cresques\nAccrocca Elio Filippo\nAddison Joseph\nAdorno Theodor Wiesengrund\nAfanasjev Aleksandr Nikolaevič\nAgamben Giorgio\nAgostino, santo\nAiolfi Luciano\nAizenberg Roberto\nAlain (Émile Auguste Chartier)\nAlberoni Francesco\nAlberti Leon Battista\nAlbertoni Ettore A.\nAlcmane\nAleramo Sibilla\nAlessandro I, zar\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody\nAlmansi Guido\nAltdorfer Albrecht`;
-    // document.getElementById('items-list').value = `Italo Calvino\nAbba Giulio Cesare\nAbbé Grégoire (Henry Baptiste Grégoire)\nAbbott Edwin Abbott\nAbelardo\nAgamben Giorgio\nAgostino, santo\nAiolfi Luciano\nAizenberg Roberto\nAlain (Émile Auguste Chartier)\nAlberoni Francesco\nAlberti Leon Battista\nAlbertoni Ettore A.\nAlcmane\nAleramo Sibilla\nAlessandro I, zar\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody\nAlmansi Guido\nAltdorfer Albrecht`;
+    document.getElementById('items-list').value = `Italo Calvino\nAlberoni Francesco\nAlberti Leon Battista\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody`;
     //
 }
