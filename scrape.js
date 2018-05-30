@@ -4,7 +4,6 @@ let language = 'it';
 let properties = {
     'P31': 'istance of',
     'P21': 'sex or gender',
-    // 'P18': 'image',
     'P27': 'country of citizenship',
     'P569': 'date of birth',
     'P19': 'place of birth',
@@ -15,6 +14,28 @@ let properties = {
 let output = [];
 
 function getIssues() {
+
+    var myTable = d3.select('#table-container').append('table')
+        .classed('table', true)
+        .classed('table-condensed', true)
+
+    var firstRow = myTable.append('thead').append('tr').attr('id', 'header');
+    
+    
+    firstRow.append('th').html('idWikidata');
+    firstRow.append('th').html('original_name');
+    firstRow.append('th').html('nameWikidata');
+    firstRow.append('th').html('description');
+    firstRow.append('th').html('uri');
+
+    firstRow.append('th').html('prop id');
+    firstRow.append('th').html('prop value');
+    firstRow.append('th').html('comments');
+    firstRow.append('th').html('id');
+    firstRow.append('th').html('value id');
+    firstRow.append('th').html('value name');
+
+    firstRow.append('th').html('found');
 
     var itemsList = document.getElementById('items-list').value.split("\n");
     console.log(itemsList)
@@ -120,6 +141,10 @@ function getIssues() {
                 })
 
             } else {
+                output.push({
+                    'original_name': name,
+                    found: person.found
+                })
                 counter++;
                 if (counter < itemsList.length) {
                     searchPerson(itemsList[counter]);
@@ -132,6 +157,8 @@ function getIssues() {
 
         });
     }
+
+
 
     // var cid = '1a87f8ff8608809c0c7e';
     // var cs = 'cb4dd9c973bf7e377fc9f51330f223c746231550';
@@ -278,10 +305,11 @@ function getIssues() {
 }
 
 function downloadData() {
-		console.log('download everything :)')
-    // var outputName = 'github-issues.tsv'
+    console.log('download everything :)')
+    let outputName = 'wikidata-people.tsv'
+
     // // repository id  number  state created_at  updated_at  closed_at labels
-    // var tsvtxt = 'repository\tid\tnumber\tstate\tcreated_at\tupdated_at\tclosed_at\tlabels\tcomments\ttitle\tuser_id\tuser_login\tissue_url\tbody\n';
+    let tsvtxt = 'repository\tid\tnumber\tstate\tcreated_at\tupdated_at\tclosed_at\tlabels\tcomments\ttitle\tuser_id\tuser_login\tissue_url\tbody\n';
     // output.forEach(function(o, i) {
     //     // console.log(o);
     //     tsvtxt += o.repository + '\t' + o.id + '\t' + o.number + '\t' + o.state + '\t' + o.created_at + '\t' + o.updated_at + '\t' + o.closed_at + '\t' + o.labels + '\t' + o.comments + '\t' + o.title + '\t' + o.user_id + '\t' + o.user_login + '\t' + o.issue_url + '\t' + o.body + '\n';
