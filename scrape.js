@@ -11,31 +11,60 @@ let properties = {
     'P20': 'place of death',
     'P106': 'occupation'
 }
+
+var myTable = d3.select('#table-container').append('table')
+    .classed('table', true)
+    .classed('table-condensed', true)
+
+let tableHead = myTable.append('thead').append('tr').attr('id', 'header');
+
+tableHead.append('th').html('idWikidata');
+tableHead.append('th').html('original_name');
+tableHead.append('th').html('nameWikidata');
+tableHead.append('th').html('description');
+tableHead.append('th').html('uri');
+tableHead.append('th').html('prop id');
+tableHead.append('th').html('prop value');
+// tableHead.append('th').html('comments');
+// tableHead.append('th').html('id');
+tableHead.append('th').html('value id');
+tableHead.append('th').html('value name');
+tableHead.append('th').html('found');
+
 let output = [];
+
+let rows = myTable.append('tbody').selectAll('tr').data(output)
+
+function updateTable() {
+    rows = rows.data(output);
+
+    rows.exit().remove();
+
+    rows = rows.enter()
+        .append('tr')
+        .attr('id', function(d) { console.log(d); return d.idWikidata })
+        .html( function(d) {
+            let rowHTML = `
+                <th class="classname">${d.idWikidata}</th>
+                <th class="classname">${d.original_name}</th>
+                <th class="classname">${d.nameWikidata}</th>
+                <th class="classname">${d.description}</th>
+                <th class="classname">${d.uri}</th>
+                <th class="classname">${d['prop id']}</th>
+                <th class="classname">${d['prop name']}</th>
+                <th class="classname">${d['value id']}</th>
+                <th class="classname">${d['value name']}</th>
+                <th class="classname">${d['found']}</th>
+            `;
+            return rowHTML;
+        } )
+        .merge(rows)
+}
+
 
 function getIssues() {
 
-    var myTable = d3.select('#table-container').append('table')
-        .classed('table', true)
-        .classed('table-condensed', true)
 
-    var firstRow = myTable.append('thead').append('tr').attr('id', 'header');
-    
-    
-    firstRow.append('th').html('idWikidata');
-    firstRow.append('th').html('original_name');
-    firstRow.append('th').html('nameWikidata');
-    firstRow.append('th').html('description');
-    firstRow.append('th').html('uri');
-
-    firstRow.append('th').html('prop id');
-    firstRow.append('th').html('prop value');
-    firstRow.append('th').html('comments');
-    firstRow.append('th').html('id');
-    firstRow.append('th').html('value id');
-    firstRow.append('th').html('value name');
-
-    firstRow.append('th').html('found');
 
     var itemsList = document.getElementById('items-list').value.split("\n");
     console.log(itemsList)
@@ -122,10 +151,11 @@ function getIssues() {
                             d['description'] = person.description
                             d['nameWikidata'] = person.label
 
-                        })
-                        // console.table(propertiesAvailable);
+                            output.push(d);
 
-                        output.push(propertiesAvailable);
+                        })
+                        
+                        updateTable();
 
                         counter++;
                         if (counter < itemsList.length) {
@@ -145,6 +175,7 @@ function getIssues() {
                     'original_name': name,
                     found: person.found
                 })
+                updateTable();
                 counter++;
                 if (counter < itemsList.length) {
                     searchPerson(itemsList[counter]);
