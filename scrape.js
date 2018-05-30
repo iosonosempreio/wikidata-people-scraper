@@ -12,7 +12,7 @@ let properties = {
     'P106': 'occupation'
 }
 
-let percentage;
+let percentage = 0;
 
 var myTable = d3.select('#table-container').append('table')
     .classed('table', true)
@@ -37,11 +37,11 @@ let rows = myTable.append('tbody').selectAll('tr').data(output, function(d) { re
 
 function updateTable() {
 
-    output = output.sort(function(a, b) {
-        var textA = a.original_name //.toUpperCase();
-        var textB = b.original_name //.toUpperCase();
-        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
-    });
+    // output = output.sort(function(a, b) {
+    //     var textA = a.original_name //.toUpperCase();
+    //     var textB = b.original_name //.toUpperCase();
+    //     return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+    // });
 
     rows = rows.data(output, function(d) { return d.idWikidata });
 
@@ -67,7 +67,7 @@ function updateTable() {
                 <td class="">${d.description}</td>
                 <td class="">${d.uri}</td>
                 <td class="">${d['prop id']}</td>
-                <td class="">${d['prop name']}</td>
+                <td class="">${d['prop value']}</td>
                 <td class="">${d['value id']}</td>
                 <td class="">${d['value name']}</td>
                 <td class="">${d['found']}</td>
@@ -199,7 +199,7 @@ function getIssues() {
 
 
 
-        console.log(percentage, name)
+        console.log(counter, name)
         // Search for person
         let urlSearchPerson = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${name}&language=${language}&format=json&origin=*`;
         let person = {}
@@ -370,7 +370,7 @@ function downloadData() {
         })
     });
 
-    // console.log(tsvtxt);
+    console.log(tsvtxt);
 
     var blob = new Blob([tsvtxt], {
         type: "data:text/tsv;charset=utf-8"
