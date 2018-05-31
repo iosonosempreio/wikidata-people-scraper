@@ -12,6 +12,8 @@ let properties = {
     'P106': 'occupation'
 }
 
+let formatDate = d3.timeFormat("%Y-%m-%d")
+
 let percentage = 0;
 
 var myTable = d3.select('#table-container').append('table')
@@ -59,8 +61,8 @@ function updateTable() {
         .html(function(d) {
             let rowHTML = `
                 <td class="">
-                    <input type="text" name="wiki-id" value="${d.idWikidata} ">
-                    <input class="refresh-data hidden" type="button" onclick="replaceNameData('${d.idWikidata}', d3.select( 'tr.${d.idWikidata} input' ).property('value') )" value="refresh">
+                    <input type="text" name="wiki-id" value="${d.idWikidata}">
+                    <input class="refresh-data Xhidden" type="button" onclick="replaceNameData('${d.idWikidata}', d3.select( 'tr.${d.idWikidata} input' ).property('value') )" value="refresh">
                 </td>
                 <td class="original-name">${d.original_name}</td>
                 <td class="">${d.nameWikidata}</td>
@@ -81,7 +83,7 @@ function updateTable() {
 
 function replaceNameData(old_id, new_id) {
     console.log(`replace ${old_id} with ${new_id}`);
-    d3.selectAll('input.refresh-data').classed('hidden', true);
+    // d3.selectAll('input.refresh-data').classed('hidden', true);
 
     output = _.remove(output, function(n) {
         return n.idWikidata != old_id;
@@ -116,9 +118,9 @@ function replaceNameData(old_id, new_id) {
 
                                 let obj = {
                                     'prop id': d.mainsnak.property,
-                                    'prop name': properties[d.mainsnak.property],
+                                    'prop value': properties[d.mainsnak.property],
                                     'value id': d.mainsnak.datavalue.value.time,
-                                    'value name': d.mainsnak.datavalue.value.time
+                                    'value name': date
                                 }
 
                                 obj['original_name'] = person.originalName
@@ -136,7 +138,7 @@ function replaceNameData(old_id, new_id) {
 
                                 propertiesAvailable.push({
                                     'prop id': d.mainsnak.property,
-                                    'prop name': properties[d.mainsnak.property],
+                                    'prop value': properties[d.mainsnak.property],
                                     'value id': d.mainsnak.datavalue.value.id,
                                     'value name': undefined
                                 })
@@ -183,7 +185,7 @@ function replaceNameData(old_id, new_id) {
 
 function finish() {
     d3.select('#download-button').classed('hidden', false);
-    d3.selectAll('input.refresh-data').classed('hidden', false);
+    // d3.selectAll('input.refresh-data').classed('hidden', false);
 
 }
 
@@ -196,8 +198,6 @@ function getIssues() {
     searchPerson(itemsList[counter]);
 
     function searchPerson(name) {
-
-
 
         console.log(counter, name)
         // Search for person
@@ -235,13 +235,11 @@ function getIssues() {
                                 try {
                                     if (d.mainsnak.datavalue.type == 'time') {
 
-                                        // console.log(d.mainsnak.property, properties[d.mainsnak.property], d.mainsnak.datavalue.value.time, data.claims[key])
-
                                         let obj = {
                                             'prop id': d.mainsnak.property,
                                             'prop value': properties[d.mainsnak.property],
                                             'value id': d.mainsnak.datavalue.value.time,
-                                            'value name': d.mainsnak.datavalue.value.time
+                                            'value name': date
                                         }
 
                                         obj['original_name'] = name
@@ -380,6 +378,7 @@ function downloadData() {
 
 function loadSample() {
     document.getElementById('items-list').value = `Italo Calvino\nAbba Giulio Cesare\nAbbagnano Nicola\nAbbas il Grande, scià di Persia\nAbbé Grégoire (Henry Baptiste Grégoire)\nAbbott Edwin Abbott\nAbelardo\nAbernathy Ralph\nAbraham Cresques\nAccrocca Elio Filippo\nAddison Joseph\nAdorno Theodor Wiesengrund\nAfanasjev Aleksandr Nikolaevič\nAgamben Giorgio\nAgostino, santo\nAiolfi Luciano\nAizenberg Roberto\nAlain (Émile Auguste Chartier)\nAlberoni Francesco\nAlberti Leon Battista\nAlbertoni Ettore A.\nAlcmane\nAleramo Sibilla\nAlessandro I, zar\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody\nAlmansi Guido\nAltdorfer Albrecht`;
+    // document.getElementById('items-list').value = `Italo Calvino`;
     // document.getElementById('items-list').value = `Italo Calvino\nAlberoni Francesco\nAlberti Leon Battista\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody`;
     //
 }
