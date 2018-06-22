@@ -123,9 +123,9 @@ function replaceNameData(old_id, new_id) {
 
                                 let thisDate = '';
                                 if (d.mainsnak.datavalue.value.time.substring(0, 1) == '-') {
-                                    thisDate += d.mainsnak.datavalue.value.time.substring(1, 5) + ' AC'
+                                    thisDate += '-' + d.mainsnak.datavalue.value.time.substring(1, 5)
                                 } else {
-                                    thisDate += d.mainsnak.datavalue.value.time.substring(1, 5) + ' DC'
+                                    thisDate += d.mainsnak.datavalue.value.time.substring(1, 5)
                                 }
 
                                 // console.log(d);
@@ -251,9 +251,9 @@ function getIssues() {
 
                                         let thisDate = '';
                                         if (d.mainsnak.datavalue.value.time.substring(0, 1) == '-') {
-                                            thisDate += d.mainsnak.datavalue.value.time.substring(1, 5) + ' AC'
+                                            thisDate += '-' + d.mainsnak.datavalue.value.time.substring(1, 5)
                                         } else {
-                                            thisDate += d.mainsnak.datavalue.value.time.substring(1, 5) + ' DC'
+                                            thisDate += d.mainsnak.datavalue.value.time.substring(1, 5)
                                         }
 
                                         // console.log(d);
