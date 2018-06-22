@@ -12,6 +12,11 @@ let properties = {
     'P106': 'occupation'
 }
 
+// properties = {
+//     'P569': 'date of birth',
+//     'P570': 'date of death',
+// }
+
 let formatDate = d3.timeFormat("%Y-%m-%d")
 
 let percentage = 0;
@@ -116,11 +121,20 @@ function replaceNameData(old_id, new_id) {
                         try {
                             if (d.mainsnak.datavalue.type == 'time') {
 
+                                let thisDate = '';
+                                if (d.mainsnak.datavalue.value.time.substring(0, 1) == '-') {
+                                    thisDate += '-' + d.mainsnak.datavalue.value.time.substring(1, 5)
+                                } else {
+                                    thisDate += d.mainsnak.datavalue.value.time.substring(1, 5)
+                                }
+
+                                // console.log(d);
+
                                 let obj = {
                                     'prop id': d.mainsnak.property,
                                     'prop value': properties[d.mainsnak.property],
-                                    'value id': d.mainsnak.datavalue.value.time,
-                                    'value name': date
+                                    'value id': null,
+                                    'value name': thisDate
                                 }
 
                                 obj['original_name'] = person.originalName
@@ -231,15 +245,24 @@ function getIssues() {
                         if (data.claims[key]) {
 
                             data.claims[key].forEach(function(d) {
-
                                 try {
                                     if (d.mainsnak.datavalue.type == 'time') {
+
+
+                                        let thisDate = '';
+                                        if (d.mainsnak.datavalue.value.time.substring(0, 1) == '-') {
+                                            thisDate += '-' + d.mainsnak.datavalue.value.time.substring(1, 5)
+                                        } else {
+                                            thisDate += d.mainsnak.datavalue.value.time.substring(1, 5)
+                                        }
+
+                                        // console.log(d);
 
                                         let obj = {
                                             'prop id': d.mainsnak.property,
                                             'prop value': properties[d.mainsnak.property],
-                                            'value id': d.mainsnak.datavalue.value.time,
-                                            'value name': date
+                                            'value id': null,
+                                            'value name': thisDate
                                         }
 
                                         obj['original_name'] = name

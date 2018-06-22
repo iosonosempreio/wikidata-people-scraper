@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Fetch test</title>
+    <meta name="description" content="Test with Sync Fetch">
+    <meta name="author" content="iosnosempreio">
+    <!-- <link rel="stylesheet" href="css/styles.css?v=1.0"> -->
+    <!--[if lt IE 9]>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+    <script>
+    console
+
+    // Initialise, passing in worker lib location...
+
+
+    let language = 'it';
+
+    let people = 'Italo Calvino\nAbba Giulio Cesare\nAbbagnano Nicola\nAbbas il Grande, scià di Persia\nAbbé Grégoire (Henry Baptiste Grégoire)\nAbbott Edwin Abbott\nAbelardo\nAbernathy Ralph\nAbraham Cresques\nAccrocca Elio Filippo\nAddison Joseph\nAdorno Theodor Wiesengrund\nAfanasjev Aleksandr Nikolaevič\nAgamben Giorgio\nAgostino, santo\nAiolfi Luciano\nAizenberg Roberto\nAlain (Émile Auguste Chartier)\nAlberoni Francesco\nAlberti Leon Battista\nAlbertoni Ettore A.\nAlcmane\nAleramo Sibilla\nAlessandro I, zar\nAlessandro III, zar\nAlfieri Vittorio\nAlgarotti Francesco\nAlighieri Dante\nAllen Woody\nAlmansi Guido\nAltdorfer Albrecht'
+
+    // P31=istance of; P21=sex or gender; P18=image; P27=country of citizenship; P569=date of birth; P19=place of birth; P570=date of death; P20=place of death; P106=occupation;
+    let relevantClaims = ['P31', 'P21', 'P27', 'P569', 'P19', 'P570', 'P20', 'P106'];
+    // relevantClaims = ['P31'];
+
+    let getValues = (name, item, claims) => {
+        // console.log(item, claims);
+        let flattenClaims = [];
+
+        claims.forEach(d => {
+            d.forEach(e => {
+                flattenClaims.push(e.mainsnak)
+            })
+        })
+
+        // console.log(flattenClaims);
+
+        claimsToSearch = [];
+
+        let final = [];
+
+        flattenClaims.forEach(claim => {
+            if (claim.datatype == 'time') {
+                console.log('time to add at dates', claim)
+                final.push({
+                    property_id: claim.property,
+                    property_label: claim.property == 'P569' ? 'data di nascita' : claim.property == 'P570' ? 'data di morte' : '???',
+                    value_id: '',
+                    value_label: claim.datavalue.value.time
+                });
+            } else {
+                // console.log('not time')
+                claimsToSearch.push(claim.property);
+                claimsToSearch.push(claim.datavalue.value.id);
+            }
+        })
+
+
+
+        return fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${claimsToSearch.join('|')}&languages=it&props=labels&origin=*`)
+            .then(function(response) {
+                return response.json();
+            }).then(function(values) {
+                final = final.concat(flattenClaims.filter(d => {
+                    return d.datatype != 'time'
+                }).map(d => {
+                    return {
+                        property_id: d.property,
+                        property_label: values.entities[d.property].labels[language].value,
+                        value_id: d.datavalue.value.id,
+                        value_label: values.entities[d.datavalue.value.id].labels[language].value
+                    }
+                }))
+                // console.table(final);
+
+                return final;
+            })
+            .then(function(final) {
+                final.forEach(d => {
+                    d.original_name = name;
+                    d.found = true;
+                    d.label = item.match.text;
+                    d.concepturi = item.concepturi;
+                    d.description = item.description;
+                    d.id = item.id;
+                })
+                // console.table(final);
+                return final;
+            })
+            .catch(error => console.error(`Error while retrieving claims values`, error))
+
+
+    }
+
+    let getProperties = (name, item) => {
+        // return `${name} è figo 2`
+        return fetch(`https://www.wikidata.org/w/api.php?action=wbgetclaims&format=json&entity=${item.id}&origin=*`)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(properties) {
+                console.log(name, item, properties.claims)
+                // console.log(properties.claims['P31'][0].mainsnak)
+
+                let claims = []
+
+                relevantClaims.forEach(d => {
+                    console.log(d,properties.claims[d])
+                    try {
+                    	claims.push(properties.claims[d]);
+                    } catch (err) {
+                    	console.log(err)
+                    }
+                    // if (properties.claims[d]){
+                    // }
+                    // claims.push(properties.claims[d]);
+
+                })
+
+                console.log(claims)
+
+                return getValues(name, item, claims);
+            })
+            .catch(error => {
+                console.warn(`Error while searching properties for "${name}:"`)
+                console.error(error);
+                let final = {
+                	original_name: name,
+                    found: true,
+                    label: item.match.text,
+                    concepturi: item.concepturi,
+                    description: item.description,
+                    id: item.id
+                }
+                return  final;
+            })
+    }
+
+    let searchPerson = name => {
+
+        return fetch(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${name}&language=${language}&format=json&origin=*`)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(myJson) {
+                let item = myJson.search[0]
+
+                return getProperties(name, item);
+
+            })
+            .catch(error => {
+                console.warn(`${name} not found`)
+                // console.error(error)
+                let final = {
+                    original_name: name,
+                    found: false,
+                }
+                return final;
+            })
+    }
+
+    // people = 'Italo Calvino\nDante Alighieri\nAbbagnano Nicola';
+
+    // people = 'abelardo'
+    people = 'alberti leon battista'
+
+    let output = []
+
+    people.split('\n').forEach(async name => {
+        // console.log(name);
+        output.push(await searchPerson(name));
+    })
+    </script>
+</body>
+
+</html>
